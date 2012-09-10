@@ -1,16 +1,37 @@
 #!/opt/bin/bash
 ####################################################################
 # rrdstorm v1.3 (c) 2007-2008 http://xlife.zuavra.net && cupacup at wl500g.info
+# Adapted for RT-N66u by ryzhov_al @ wl500g.info
+#
 # Published under the terms of the GNU General Public License v2.
 # This program simplifies the use of rrdtool and rrdupdate.
-# The vanilla version is tweaked by default for use on the
-# For running this script you should also have bash installed, and check for right grep functions in disk stats
-# Type "rrdstorm.sh help" for more info. Quick usage first run "rrdstorm create 0 1 2 3 4 5 6 7" to create html an database files,
-# then you must update databases ever 60s usnig "rrdstorm update 0 1 2 3 4 5 6 7", graphs can be generated every time using command
-# "rrdstorm graph 0 1 2 3 4 5 6 7" or "rrdstorm graph_cron s 0 1 2 3 4 5 6 7"
-# s means 1 hour graph, check help command for more info.
+# Please, check WAN interface name at line #369 (default is "ppp0"), and
+# your disk partitions names at lines #435, #436 (default is "sda1" and "sda2").
+#
+# Usage:
+# first run "rrdstorm create 0 1 2 3 4 5 6" to create html an database files,
+# then you must update databases ever 60s using "rrdstorm update 0 1 2 3 4 5 6".
+# You may draw all graphs using "rrdstorm graph 0 1 2 3 4 5 6"
+# or draw graphs for a some periode of time using "rrdstorm graph_cron s 0 1 2 3 4 5 6"
+# where:
+# s means 1 hour graphs,
+# h means 4 hours graphs,
+# d means 24 hours graphs,
+# w means weekly graphs,
+# m means monthly graphs,
+# y means yearly graphs.
+#
+# and numbers means:
+# 0 - Average system load,
+# 1 - RAM usage,
+# 2 - Wireless PHY's temperatures,
+# 3 - CPU usage,
+# 4 - WAN traffic statistics,
+# 5 - Disk space,
+# 6 - Wireless outgoing traffic.
+#
 ####################################################################
-VERSION="RT-N16"
+VERSION="RT-N66u"
 DATE=$(date '+%x %R')
 ####################################################################
 
@@ -20,15 +41,15 @@ DATE=$(date '+%x %R')
 
 RRDTOOL=/opt/bin/rrdtool
 RRDUPDATE=/opt/bin/rrdupdate
-RRDDATA=/opt/var/lib/www
+RRDDATA=/opt/var/rrd_storm
 RRDOUTPUT=/opt/share/www/rrd
 FORCEGRAPH=no
 
 #-------------------------------------------------------------------
-# data definition: average load
+# data definition: Average system load
 #-------------------------------------------------------------------
 
-RRDcFILE[0]="load:60:Load graphs"
+RRDcFILE[0]="load:60:System load graphs"
 RRDcDEF[0]='
 DS:l1:GAUGE:120:0:100
 DS:l5:GAUGE:120:0:100
@@ -81,18 +102,18 @@ RRDgDEF[0]=$(cat <<EOF
 EOF
 )
 
-RRDgGRAPH[0]='3600|load1|Load last hour|[ "$M" = 30 ]'
-RRDgGRAPH[1]='14400|load6|Load last 4H|[ "$M" = 30 ]'
-RRDgGRAPH[2]='86400|load24|Load last 24H|[ "$H" = 04 ] && [ "$M" = 30 ]|--x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[3]='604800|loadW|Load last week|[ "$H" = 04 ] && [ "$M" = 30 ]|--x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[4]='2678400|loadM|Load last month|[ "$H" = 04 ] && [ "$M" = 30 ]'
-RRDgGRAPH[5]='31536000|loadY|Load last year|[ "$H" = 04 ] && [ "$M" = 30 ]'
+RRDgGRAPH[0]='3600|load1|System load, last hour|[ "$M" = 30 ]'
+RRDgGRAPH[1]='14400|load6|System load, last 4 hours|[ "$M" = 30 ]'
+RRDgGRAPH[2]='86400|load24|System load, last day|[ "$H" = 04 ] && [ "$M" = 30 ]|--x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[3]='604800|loadW|System load, last week|[ "$H" = 04 ] && [ "$M" = 30 ]|--x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[4]='2678400|loadM|System load, last month|[ "$H" = 04 ] && [ "$M" = 30 ]'
+RRDgGRAPH[5]='31536000|loadY|System load, last year|[ "$H" = 04 ] && [ "$M" = 30 ]'
 
 #-------------------------------------------------------------------
-# data definition: memory allocation
+# data definition: RAM usage
 #-------------------------------------------------------------------
 
-RRDcFILE[1]="mem:60:Memory allocation"
+RRDcFILE[1]="mem:60:RAM usage graphs"
 RRDcDEF[1]='
 DS:cached:GAUGE:120:0:1000000
 DS:buffer:GAUGE:120:0:1000000
@@ -184,24 +205,80 @@ RRDgDEF[1]=$(cat <<EOF
 EOF
 )
 
-RRDgGRAPH[6]='3600|mem1|RAM last hour|[ "$M" = 30 ]|-l 0 -r'
-RRDgGRAPH[7]='14400|mem6|RAM last 4H|[ "$M" = 30 ]|-l 0 -r'
-RRDgGRAPH[8]='86400|mem24|RAM last 24H|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[9]='604800|memW|RAM last week|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[10]='2678400|memM|RAM last month|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
-RRDgGRAPH[11]='31536000|memY|RAM last year|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[6]='3600|mem1|RAM usage, last hour|[ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[7]='14400|mem6|RAM usage, last 4 hours|[ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[8]='86400|mem24|RAM usage, last day|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[9]='604800|memW|RAM usage, last week|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[10]='2678400|memM|RAM usage, last month|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[11]='31536000|memY|RAM usage, last year|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
 
 #-------------------------------------------------------------------
-# data definition: CPU temp and fan
+# data definition: Wireless PHY's temperatures
 #-------------------------------------------------------------------
 
-##no way to go(maybe wlan data SNR,RATE...)
+RRDcFILE[2]="temp:60:Wireless PHYs temperature graphs"
+RRDcDEF[2]='
+DS:temp24:GAUGE:120:0:100
+DS:temp50:GAUGE:120:0:100
+RRA:AVERAGE:0.5:1:576
+RRA:AVERAGE:0.5:6:672
+RRA:AVERAGE:0.5:24:732
+RRA:AVERAGE:0.5:144:1460
+'
+RRDuSRC[2]="temp24:temp50"
+RRDuVAL[2]='
+if [[ $(wl -i eth1 status | grep BSSID | awk "{print \$2}") = "" ]] ; then
+  TEMP_24=0 ;
+else
+  TEMP_24=$(($(/usr/sbin/wl -i eth1 phy_tempsense | awk "{print \$1}") /2 + 20)) ;
+fi
+if [[ $(wl -i eth2 status | grep BSSID | awk "{print \$2}") = "" ]] ; then
+  TEMP_50=0 ;
+else
+  TEMP_50=$(($(/usr/sbin/wl -i eth2 phy_tempsense | awk "{print \$1}") /2 + 20)) ;
+fi
+echo "${TEMP_24}:${TEMP_50}"
+'
+RRDgUM[2]='degrees, C'
+RRDgLIST[2]="12 13 14 15 16 17"
+RRDgDEF[2]=$(cat <<EOF
+'DEF:t24=\$RRD:temp24:AVERAGE'
+'DEF:t50=\$RRD:temp50:AVERAGE'
+'CDEF:bo=t24,UN,0,t24,IF,0,GT,UNKN,INF,IF'
+'AREA:bo#DDDDDD:'
+'CDEF:bi=t50,UN,0,t50,IF,0,GT,INF,UNKN,IF'
+'AREA:bi#FEFEED:'
+'HRULE:1.0#44B5FF'
+'AREA:t24#0040A2:Temperature, 2,4GHz'
+  'VDEF:maxN=t24,MAXIMUM'
+  'VDEF:minN=t24,MINIMUM'
+  'VDEF:avgN=t24,AVERAGE'
+  GPRINT:maxN:"Max %6.2lf %s"
+  GPRINT:minN:"Min %6.2lf %s"
+  GPRINT:avgN:"Avg %6.2lf %s\n"
+'AREA:t50#90C5CC:Temperature, 5GHz  '
+  'VDEF:maxS=t50,MAXIMUM'
+  'VDEF:minS=t50,MINIMUM'
+  'VDEF:avgS=t50,AVERAGE'
+  GPRINT:maxS:"Max %6.2lf %s"
+  GPRINT:minS:"Min %6.2lf %s"
+  GPRINT:avgS:"Avg %6.2lf %s\n"
+EOF
+)
+
+RRDgGRAPH[12]='3600|temp1|Wireless PHYs temperature, last hour|[ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[13]='14400|temp6|Wireless PHYs temperature, last 4 hours|[ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[14]='86400|temp24|Wireless PHYs temperature, last day|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[15]='604800|tempW|Wireless PHYs temperature, last week|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[16]='2678400|tempM|Wireless PHYs temperature, last month|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
+RRDgGRAPH[17]='31536000|tempY|Wireless PHYs temperature, last year|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
+
 
 #-------------------------------------------------------------------
-# data definition: cpu usage
+# data definition: CPU usage
 #-------------------------------------------------------------------
 
-RRDcFILE[3]="cpu:60:CPU Usage"
+RRDcFILE[3]="cpu:60:CPU usage graphs"
 RRDcDEF[3]='
 DS:user:DERIVE:120:0:U
 DS:nice:DERIVE:120:0:U
@@ -251,7 +328,6 @@ RRDgDEF[3]=$(cat <<EOF
 'LINE2:l#90C5CC::STACK'
   'VDEF:maxU=usr,MAXIMUM'
   'VDEF:minU=usr,MINIMUM'
-
   'VDEF:avgU=usr,AVERAGE'
   GPRINT:maxU:"Max %6.2lf%%"
   GPRINT:minU:"Min %6.2lf%%"
@@ -266,18 +342,18 @@ RRDgDEF[3]=$(cat <<EOF
 EOF
 )
 
-RRDgGRAPH[18]='3600|cpu1|CPU Usage (1H)|[ "$M" = 30 ]|-l 0 -r -u 99.99'
-RRDgGRAPH[19]='14400|cpu6|CPU Usage (4H)|[ "$M" = 30 ]|-r -l 0 -u 99.99'
-RRDgGRAPH[20]='86400|cpu24|CPU Usage (24H)|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99 --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[21]='604800|cpuW|CPU Usage (last week)|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99 --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[22]='2678400|cpuM|CPU Usage (last month)|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99'
-RRDgGRAPH[23]='31536000|cpuY|CPU Usage (last year)|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99'
+RRDgGRAPH[18]='3600|cpu1|CPU usage, last hour|[ "$M" = 30 ]|-l 0 -r -u 99.99'
+RRDgGRAPH[19]='14400|cpu6|CPU usage, last 4 hours|[ "$M" = 30 ]|-r -l 0 -u 99.99'
+RRDgGRAPH[20]='86400|cpu24|CPU usage, last day|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99 --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[21]='604800|cpuW|CPU usage, last week|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99 --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[22]='2678400|cpuM|CPU usage, last month|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99'
+RRDgGRAPH[23]='31536000|cpuY|CPU usage, last year|[ "$H" = 04 ] && [ "$M" = 30 ]|-r -l 0 -u 99.99'
 
 #-------------------------------------------------------------------
-# network stats
+# data definition: WAN traffic statistics
 #-------------------------------------------------------------------
 
-RRDcFILE[4]="wan:60:WAN Traffic"
+RRDcFILE[4]="wan:60:WAN Traffic graphs"
 RRDcDEF[4]='
 DS:in:DERIVE:600:0:12500000
 DS:out:DERIVE:600:0:12500000
@@ -288,7 +364,7 @@ RRA:AVERAGE:0.5:144:1460
 '
 RRDuSRC[4]="in:out"
 RRDuVAL[4]='
-IF="vlan1"
+IF="ppp0"
 IN=$(grep "${IF}" /proc/net/dev|awk -F ":" "{print \$2}"|awk "{print \$1}")
 OUT=$(grep "${IF}" /proc/net/dev|awk -F ":" "{print \$2}"|awk "{print \$9}")
 echo "${IN}:${OUT}"
@@ -329,20 +405,20 @@ RRDgDEF[4]=$(cat <<EOF
 EOF
 )  
    
-RRDgGRAPH[24]='3600|wan1|WAN Traffic (1H)|[ "$M" = 30 ]|-r'
-RRDgGRAPH[25]='14400|wan6|WAN Traffic (4H)|[ "$M" = 30 ]|-r'
-RRDgGRAPH[26]='86400|wan24|WAN Traffic (24H)|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[27]='604800|wanW|WAN Traffic (last week)|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[28]='2678400|wanM|WAN Traffic (last month)|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
-RRDgGRAPH[29]='31536000|wanY|WAN Traffic (last year)|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
+RRDgGRAPH[24]='3600|wan1|WAN Traffic, last hour|[ "$M" = 30 ]|-r'
+RRDgGRAPH[25]='14400|wan6|WAN Traffic, last 4 hours|[ "$M" = 30 ]|-r'
+RRDgGRAPH[26]='86400|wan24|WAN Traffic, last day|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[27]='604800|wanW|WAN Traffic, last week|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[28]='2678400|wanM|WAN Traffic, last month|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
+RRDgGRAPH[29]='31536000|wanY|WAN Traffic, last year|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
 
 #-------------------------------------------------------------------
-# disk space
+# data definition: Disk space
 #-------------------------------------------------------------------
 
-RRDcFILE[5]="hdd:60:Disk space"
+RRDcFILE[5]="hdd:60:Disk space graphs"
 RRDcDEF[5]='
-DS:optprosto:GAUGE:600:0:U	
+DS:optprosto:GAUGE:600:0:U
 DS:optzasede:GAUGE:600:0:U
 DS:mntprosto:GAUGE:600:0:U
 DS:mntzasede:GAUGE:600:0:U
@@ -353,12 +429,12 @@ RRA:AVERAGE:0.5:144:1460
 '
 RRDuSRC[5]="optprosto:optzasede:mntprosto:mntzasede"
 RRDuVAL[5]='
-SP=$(/opt/bin/coreutils-df "-B1")
-echo -n $(echo "$SP"|grep opt|awk "{print \$3\":\"\$2}"):
-echo -n $(echo "$SP"|grep mnt|awk "{print \$3\":\"\$2}")
+SP=$(/opt/bin/df "-B1")
+echo -n $(echo "$SP"|grep sda1|awk "{print \$3\":\"\$2}"):
+echo -n $(echo "$SP"|grep sda2|awk "{print \$3\":\"\$2}")
 echo
 '
-RRDgUM[5]='space (bytes)'
+RRDgUM[5]='bytes'
 RRDgLIST[5]="30 31 32 33 34 35"
 RRDgDEF[5]=$(cat <<EOF
 'DEF:optzasede=\$RRD:optzasede:AVERAGE'
@@ -367,7 +443,7 @@ RRDgDEF[5]=$(cat <<EOF
 'DEF:mntprosto=\$RRD:mntprosto:AVERAGE'
 'CDEF:bo=mntzasede,UN,0,mntzasede,IF,0,GT,UNKN,INF,IF'
 'AREA:bo#DDDDDD:'
-'AREA:mntzasede#CC0033:/mnt:'
+'AREA:mntzasede#CC0033:sda1:'
   'CDEF:root=mntzasede,mntprosto,+'
   'VDEF:sumr=root,LAST'
   GPRINT:sumr:"Total %6.2lf %sB"
@@ -382,7 +458,7 @@ RRDgDEF[5]=$(cat <<EOF
   'CDEF:rootPa=100,rootPu,-'
   'VDEF:procar=rootPa,LAST'
   GPRINT:procar:"%6.2lf%%\n"
-'AREA:optzasede#33CC00:/opt:STACK'
+'AREA:optzasede#33CC00:sda2:STACK'
   'CDEF:home=optzasede,optprosto,+'
   'VDEF:sumh=home,LAST'
   GPRINT:sumh:"Total %6.2lf %sB"
@@ -398,47 +474,46 @@ RRDgDEF[5]=$(cat <<EOF
   'VDEF:procah=homePa,LAST'
   GPRINT:procah:"%6.2lf%%\n"
 EOF
-)  
+)
 
-RRDgGRAPH[30]='3600|hdd1|Disk space (1H)|[ "$M" = 30 ]|-r -l 0'
-RRDgGRAPH[31]='14400|hdd6|Disk space (4H)|[ "$M" = 30 ]|-r -l 0'
-RRDgGRAPH[32]='86400|hdd24|Disk space (24H)|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0 --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[33]='604800|hddW|Disk space (last week)|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0 --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[34]='2678400|hddM|Disk space (last month)|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0'
-RRDgGRAPH[35]='31536000|hddY|Disk space (last year)|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0'
+RRDgGRAPH[30]='3600|hdd1|Disk space, last hour|[ "$M" = 30 ]|-r -l 0'
+RRDgGRAPH[31]='14400|hdd6|Disk space, last 4 hours|[ "$M" = 30 ]|-r -l 0'
+RRDgGRAPH[32]='86400|hdd24|Disk space, last day|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0 --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[33]='604800|hddW|Disk space, last week|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0 --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[34]='2678400|hddM|Disk space, last month|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0'
+RRDgGRAPH[35]='31536000|hddY|Disk space, last year|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r -l 0'
 
 #-------------------------------------------------------------------
-# network stats
+# data definition: Wireless outgoing traffic
 #-------------------------------------------------------------------
 
-RRDcFILE[6]="wlan:60:WLAN Traffic"
+RRDcFILE[6]="wlan:60:Wireless outgoing traffic graphs"
 RRDcDEF[6]='
-DS:in:DERIVE:600:0:U
-DS:out:DERIVE:600:0:U
+DS:out24:DERIVE:600:0:U
+DS:out50:DERIVE:600:0:U
 RRA:AVERAGE:0.5:1:576
 RRA:AVERAGE:0.5:6:672
 RRA:AVERAGE:0.5:24:732
 RRA:AVERAGE:0.5:144:1460
 '
-RRDuSRC[6]="in:out"
+RRDuSRC[6]="out24:out50"
 RRDuVAL[6]='
-IF="eth1"
-IN=$(grep "${IF}" /proc/net/dev|awk -F ":" "{print \$2}"|awk "{print \$1}")
-OUT=$(grep "${IF}" /proc/net/dev|awk -F ":" "{print \$2}"|awk "{print \$9}")
-echo "${IN}:${OUT}"
+OUT_24=$(grep eth1 /proc/net/dev|awk -F ":" "{print \$2}"|awk "{print \$9}")
+OUT_50=$(grep eth2 /proc/net/dev|awk -F ":" "{print \$2}"|awk "{print \$9}")
+echo "${OUT_24}:${OUT_50}"
 '
 RRDgUM[6]='bytes/s'
 RRDgLIST[6]="36 37 38 39 40 41"
 RRDgDEF[6]=$(cat <<EOF
-'DEF:ds1=\$RRD:in:AVERAGE'
-'DEF:ds2=\$RRD:out:AVERAGE'
+'DEF:ds1=\$RRD:out24:AVERAGE'
+'DEF:ds2=\$RRD:out50:AVERAGE'
   'VDEF:max1=ds1,MAXIMUM'
 'CDEF:ui=ds1,UN,0,ds1,IF,0,GT,UNKN,NEGINF,IF'
 'CDEF:uo=0,ds1,UN,0,ds1,IF,0,GT,max1,50,/,UNKN,IF,-'
 'CDEF:bi=ds1,UN,0,ds1,IF,0,GT,INF,UNKN,IF'
 'CDEF:bo=ds1,UN,0,ds1,IF,0,GT,UNKN,INF,IF'
 'AREA:bi#EDFEED:'
-'AREA:ds1#00B5E3:Incoming'
+'AREA:ds1#00B5E3:Outgoing 2,4GHz'
 'LINE1:ds1#0085B3:'
   'VDEF:min1=ds1,MINIMUM'
   'VDEF:avg1=ds1,AVERAGE'
@@ -448,7 +523,7 @@ RRDgDEF[6]=$(cat <<EOF
   GPRINT:avg1:"Avg %6.2lf %s"
   GPRINT:tot1:"Sum %6.2lf %s"
 'AREA:ui#FF6666:Offline\n'
-'LINE2:ds2#E32D00:Outgoing'
+'LINE2:ds2#E32D00:Outgoing 5GHz  '
   'VDEF:max2=ds2,MAXIMUM'
   'VDEF:min2=ds2,MINIMUM'
   'VDEF:avg2=ds2,AVERAGE'
@@ -461,45 +536,14 @@ RRDgDEF[6]=$(cat <<EOF
 'AREA:uo#00FE00:Online'
 'HRULE:0#000000'
 EOF
-)  
-   
-RRDgGRAPH[36]='3600|wlan1|WLAN Traffic (1H)|[ "$M" = 30 ]|-r'
-RRDgGRAPH[37]='14400|wlan6|WLAN Traffic (4H)|[ "$M" = 30 ]|-r'
-RRDgGRAPH[38]='86400|wlan24|WLAN Traffic (24H)|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[39]='604800|wlanW|WLAN Traffic (last week)|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[40]='2678400|wlanM|WLAN Traffic (last month)|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
-RRDgGRAPH[41]='31536000|wlanY|WLAN Traffic (last year)|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
-
-#-------------------------------------------------------------------
-# swap allocation
-#-------------------------------------------------------------------
-
-RRDcFILE[7]="mem:60:Swap allocation"
-RRDgUM[7]='bytes'
-RRDgLIST[7]="42 43 44 45 46 47"
-RRDgDEF[7]=$(cat <<EOF
-'DEF:sT=\$RRD:swapt:AVERAGE'
-'DEF:sF=\$RRD:swapf:AVERAGE'
-'CDEF:sU=sT,sF,-'
-'CDEF:bo=sT,UN,0,sT,IF,0,GT,UNKN,561936,IF'
-'AREA:bo#FFCCCC:'
-'AREA:sU#9999FF:Used'
-'AREA:sF#FFFF99:Free:STACK'
-'LINE:sU#7777DD:'
-'HRULE:31832#FF0000'
-'HRULE:561936#FF0000'
-EOF
 )
 
-RRDgGRAPH[42]='3600|swap1|Swap last hour|[ "$M" = 30 ]|-l 0 -r'
-RRDgGRAPH[43]='14400|swap6|Swap last 4H|[ "$M" = 30 ]|-l 0 -r'
-RRDgGRAPH[44]='86400|swap24|Swap last 24H|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
-RRDgGRAPH[45]='604800|swapW|Swap last week|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
-RRDgGRAPH[46]='2678400|swapM|Swap last month|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
-RRDgGRAPH[47]='31536000|swapY|Swap last year|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -r'
-
-
-
+RRDgGRAPH[36]='3600|wlan1|WLAN outgoing traffic, last hour|[ "$M" = 30 ]|-r'
+RRDgGRAPH[37]='14400|wlan6|WLAN outgoing traffic, last 4 hours|[ "$M" = 30 ]|-r'
+RRDgGRAPH[38]='86400|wlan24|WLAN outgoing traffic, last day|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:1:DAY:1:HOUR:1:0:%H'
+RRDgGRAPH[39]='604800|wlanW|WLAN outgoing traffic, last week|[ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r --x-grid HOUR:4:DAY:1:DAY:1:0:"%a %d/%m"'
+RRDgGRAPH[40]='2678400|wlanM|WLAN outgoing traffic, last month|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
+RRDgGRAPH[41]='31536000|wlanY|WLAN outgoing traffic, last year|[ "$H" = 04 ] && [ "$M" -ge 30 ] && [ "$M" -le 45 ]|-r '
 
 ####################################################################
 # STOP MODIFICATIONS HERE, UNLESS YOU REALLY KNOW WHAT YOU'RE DOING
