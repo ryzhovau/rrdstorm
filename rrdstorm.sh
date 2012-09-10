@@ -10,7 +10,7 @@
 # "rrdstorm graph 0 1 2 3 4 5 6 7" or "rrdstorm graph_cron s 0 1 2 3 4 5 6 7"
 # s means 1 hour graph, check help command for more info.
 ####################################################################
-VERSION="wl500gpv2"
+VERSION="RT-N16"
 DATE=$(date '+%x %R')
 ####################################################################
 
@@ -20,8 +20,8 @@ DATE=$(date '+%x %R')
 
 RRDTOOL=/opt/bin/rrdtool
 RRDUPDATE=/opt/bin/rrdupdate
-RRDDATA=/mnt/www
-RRDOUTPUT=/mnt/www
+RRDDATA=/opt/var/lib/www
+RRDOUTPUT=/opt/share/www/rrd
 FORCEGRAPH=no
 
 #-------------------------------------------------------------------
