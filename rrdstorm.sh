@@ -1,10 +1,14 @@
 #!/opt/bin/bash
 ####################################################################
-# rrdstorm v1.0 (c) 2007 http://xlife.zuavra.net && cupacup at wl500g.info
+# rrdstorm v1.3 (c) 2007-2008 http://xlife.zuavra.net && cupacup at wl500g.info
 # Published under the terms of the GNU General Public License v2.
 # This program simplifies the use of rrdtool and rrdupdate.
 # The vanilla version is tweaked by default for use on the
 # For running this script you should also have bash installed, and check for right grep functions in disk stats
+# Type "rrdstorm.sh help" for more info. Quick usage first run "rrdstorm create 0 1 2 3 4 5 6 7" to create html an database files,
+# then you must update databases ever 60s usnig "rrdstorm update 0 1 2 3 4 5 6 7", graphs can be generated every time using command
+# "rrdstorm graph 0 1 2 3 4 5 6 7" or "rrdstorm graph_cron s 0 1 2 3 4 5 6 7"
+# s means 1 hour graph, check help command for more info.
 ####################################################################
 VERSION="wl500gpv2"
 DATE=$(date '+%x %R')
@@ -191,117 +195,7 @@ RRDgGRAPH[11]='31536000|memY|RAM last year|[ "$H" = 04 ] && [ "$M" = 30 ]|-l 0 -
 # data definition: CPU temp and fan
 #-------------------------------------------------------------------
 
-RRDcFILE[2]="temp:60:CPU Temperature and Fan RPM"
-RRDcDEF[2]='
-DS:cpu:GAUGE:120:0:100
-DS:mobo:GAUGE:120:0:100
-DS:sys:GAUGE:120:0:100
-DS:fanc:GAUGE:120:0:4000
-DS:fanf:GAUGE:120:0:4000
-DS:hdsys:GAUGE:120:0:100
-DS:hdr1:GAUGE:120:0:100
-DS:hdr2:GAUGE:120:0:100
-RRA:AVERAGE:0.5:1:576
-RRA:AVERAGE:0.5:6:672
-RRA:AVERAGE:0.5:24:732
-RRA:AVERAGE:0.5:144:1460
-'
-RRDuSRC[2]="cpu:mobo:sys:fanc:fanf:hdsys:hdr1:hdr2"
-RRDuVAL[2]='
-CPU=$(sensors|grep ^MoBo:|awk "{print \$2}"|sed "s/[^0-9.]//g")
-MOBO=$(sensors|grep ^CPU:|awk "{print \$2}"|sed "s/[^0-9.]//g")
-SYS=$(sensors|grep ^System:|awk "{print \$2}"|sed "s/[^0-9.]//g")
-FANC=$(sensors|grep "CPU Fan:"|awk "{print \$3}")
-FANF=$(sensors|grep "Front Fan:"|awk "{print \$3}"|cut -d: -f2)
-HDSYS=$(netcat localhost 7634|cut -d"|" -f4)
-HDR1=$(netcat localhost 7634|cut -d"|" -f9)
-HDR2=$(netcat localhost 7634|cut -d"|" -f14)
-echo "${CPU}:${MOBO}:${SYS}:${FANC}:${FANF}:${HDSYS}:${HDR1}:${HDR2}"
-'
-RRDgUM[2]='Celsius and RPM'
-RRDgLIST[2]="12 13 14 15 16 17"
-#RRDgLIST[2]="12"
-RRDgDEF[2]=$(cat <<EOF
-'DEF:c=\$RRD:cpu:AVERAGE'
-'DEF:m=\$RRD:mobo:AVERAGE'
-'DEF:s=\$RRD:sys:AVERAGE'
-'DEF:fc=\$RRD:fanc:AVERAGE'
-'DEF:ff=\$RRD:fanf:AVERAGE'
-'DEF:hs=\$RRD:hdsys:AVERAGE'
-'DEF:hr1=\$RRD:hdr1:AVERAGE'
-'DEF:hr2=\$RRD:hdr2:AVERAGE'
-'CDEF:bo=c,UN,0,c,IF,0,GT,UNKN,INF,IF'
-'AREA:bo#DDDDDD:'
-'AREA:m#CBFE66:CPU        '
-  'VDEF:maxM=m,MAXIMUM'
-  'VDEF:minM=m,MINIMUM'
-  'VDEF:avgM=m,AVERAGE'
-  GPRINT:minM:"Min %2.1lf"
-  GPRINT:maxM:"Max %2.1lf"
-  GPRINT:avgM:"Avg %2.1lf Celsius\n"
-'LINE1:m#ABDE46:'
-'AREA:c#BAE366:Chipset    '
-  'VDEF:maxC=c,MAXIMUM'
-  'VDEF:minC=c,MINIMUM'
-  'VDEF:avgC=c,AVERAGE'
-  GPRINT:minC:"Min %2.1lf"
-  GPRINT:maxC:"Max %2.1lf"
-  GPRINT:avgC:"Avg %2.1lf Celsius\n"
-'LINE1:c#9AC346:'
-'AREA:s#00CB33:Case       '
-  'VDEF:maxS=s,MAXIMUM'
-  'VDEF:minS=s,MINIMUM'
-  'VDEF:avgS=s,AVERAGE'
-  GPRINT:minS:"Min %2.1lf"
-  GPRINT:maxS:"Max %2.1lf"
-  GPRINT:avgS:"Avg %2.1lf Celsius\n"
-'LINE1:s#00AB13:'
-'CDEF:f1=fc,0.021,*'
-'LINE2:f1#6B7FD3:CPU fan    '
-  'VDEF:maxF=fc,MAXIMUM'
-  'VDEF:minF=fc,MINIMUM'
-  'VDEF:avgF=fc,AVERAGE'
-  GPRINT:minF:"Min %4.0lf"
-  GPRINT:maxF:"Max %4.0lf"
-  GPRINT:avgF:"Avg %4.0lf RPM\n"
-'CDEF:f2=ff,0.028,*'
-'LINE2:f2#FF00A3:Front fan  '
-  'VDEF:maxFF=ff,MAXIMUM'
-  'VDEF:minFF=ff,MINIMUM'
-  'VDEF:avgFF=ff,AVERAGE'
-  GPRINT:minFF:"Min %4.0lf"
-  GPRINT:maxFF:"Max %4.0lf"
-  GPRINT:avgFF:"Avg %4.0lf RPM\n"
-'LINE4:hs#FF0000:HDD system '
-  'VDEF:maxHS=hs,MAXIMUM'
-  'VDEF:minHS=hs,MINIMUM'
-  'VDEF:avgHS=hs,AVERAGE'
-  GPRINT:minHS:"Min %2.1lf"
-  GPRINT:maxHS:"Max %2.1lf"
-  GPRINT:avgHS:"Avg %2.1lf Celsius\n"
-'LINE4:hr2#FFBB00:HDD RAID1\:0'
-  'VDEF:maxH2=hr2,MAXIMUM'
-  'VDEF:minH2=hr2,MINIMUM'
-  'VDEF:avgH2=hr2,AVERAGE'
-  GPRINT:minH2:"Min %2.1lf"
-  GPRINT:maxH2:"Max %2.1lf"
-  GPRINT:avgH2:"Avg %2.1lf Celsius\n"
-'LINE4:hr1#FF8700:HDD RAID1\:1'
-  'VDEF:maxH1=hr1,MAXIMUM'
-  'VDEF:minH1=hr1,MINIMUM'
-  'VDEF:avgH1=hr1,AVERAGE'
-  GPRINT:minH1:"Min %2.1lf"
-  GPRINT:maxH1:"Max %2.1lf"
-  GPRINT:avgH1:"Avg %2.1lf Celsius\n"
-EOF
-)
-
-RRDgGRAPH[12]='3600|temp1|PC temperatures and fans (last hour)|[ "$M" = 30 ]|-l 20 -r'
-RRDgGRAPH[13]='14400|temp6|PC temperatures and fans (last 4H)|[ "$M" = 30 ]|-l 20 -r'
-RRDgGRAPH[14]='86400|temp24|PC temperatures and fans (last 24H)|[ "$M" = 30 ]|-l 20 -r'
-RRDgGRAPH[15]='604800|tempW|PC temperatures and fans (last week)|[ "$M" = 30 ]|-l 20 -r'
-RRDgGRAPH[16]='2678400|tempM|PC temperatures and fans (last month)|[ "$M" = 30 ]|-l 20 -r'
-RRDgGRAPH[17]='31536000|tempY|PC temperatures and fans (last year)|[ "$M" = 30 ]|-l 20 -r'
+##no way to go(maybe wlan data SNR,RATE...)
 
 #-------------------------------------------------------------------
 # data definition: cpu usage
@@ -357,6 +251,7 @@ RRDgDEF[3]=$(cat <<EOF
 'LINE2:l#90C5CC::STACK'
   'VDEF:maxU=usr,MAXIMUM'
   'VDEF:minU=usr,MINIMUM'
+
   'VDEF:avgU=usr,AVERAGE'
   GPRINT:maxU:"Max %6.2lf%%"
   GPRINT:minU:"Min %6.2lf%%"
@@ -685,7 +580,7 @@ for N in "$@"; do
 					IMGBASE=$(echo "${RRDgGRAPH[$P]}"|cut -d'|' -f2)
 					echo "<img src=\"${IMGBASE}.png\"><br>" >> "$HTMLFILE"
 				done
-				echo "</center><p>RRDStorm v${VERSION}/${DATE}</p></body>" >> "$HTMLFILE"
+				echo "</center><p>RRDStorm for ${VERSION} / ${DATE}</p></body>" >> "$HTMLFILE"
 			}
 			# update the main HTML index
 			[ ! -z "$MAKEINDEX" ] && {
@@ -696,6 +591,10 @@ for N in "$@"; do
 			VAL=$(eval "${RRDuVAL[$N]}")
 			echo "Updating ($N) $RRDFILE with $VAL .."
 			UpdateRRD "$RRDFILE" "${RRDuSRC[$N]}" "$VAL"
+		;;
+		help)
+			echo "Usage: rrdstorm {create|update|graph|graph_cron[s h d w m y]} 0 1 2 .."
+			echo "graph_cron is for cron to quicky update just one graph [1h=s 4h=h 24h=d 1week=w 1 month=m 1year=y]} 0 1 2 .."
 		;;
 		graph)
 			# grab hour and minute
@@ -774,8 +673,7 @@ done
 
 # close the main HTML index
 [ ! -z "$MAKEINDEX" ] && {
-	echo "</ul><p>RRDStorm v${VERSION}/${DATE}</p></body>" >> "$HTMLINDEX"
+	echo "</ul><p>RRDStorm for ${VERSION} / ${DATE}</p></body>" >> "$HTMLINDEX"
 }
 
 exit 0
-
