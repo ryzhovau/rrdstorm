@@ -227,15 +227,17 @@ RRA:AVERAGE:0.5:144:1460
 '
 RRDuSRC[2]="temp24:temp50"
 RRDuVAL[2]='
-if [[ $(wl -i eth1 status | grep BSSID | awk "{print \$2}") = "" ]] ; then
-  TEMP_24=0 ;
+TEMP_24=$(/usr/sbin/wl -i eth1 phy_tempsense)
+TEMP_50=$(/usr/sbin/wl -i eth2 phy_tempsense)
+if [ -z "$TEMP_24" ]; then
+ TEMP_24=0
 else
-  TEMP_24=$(($(/usr/sbin/wl -i eth1 phy_tempsense | awk "{print \$1}") /2 + 20)) ;
+ TEMP_24=$(($(echo "$TEMP_24" | awk "{print \$1}") /2 + 20))
 fi
-if [[ $(wl -i eth2 status | grep BSSID | awk "{print \$2}") = "" ]] ; then
-  TEMP_50=0 ;
+if [ -z "$TEMP_50" ]; then
+ TEMP_50=0
 else
-  TEMP_50=$(($(/usr/sbin/wl -i eth2 phy_tempsense | awk "{print \$1}") /2 + 20)) ;
+ TEMP_50=$(($(echo "$TEMP_50" | awk "{print \$1}") /2 + 20))
 fi
 echo "${TEMP_24}:${TEMP_50}"
 '
