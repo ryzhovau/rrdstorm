@@ -430,8 +430,8 @@ RRA:AVERAGE:0.5:144:1460
 RRDuSRC[5]="optprosto:optzasede:mntprosto:mntzasede"
 RRDuVAL[5]='
 SP=$(/opt/bin/df "-B1")
-echo -n $(echo "$SP"|grep sda1|awk "{print \$3\":\"\$2}"):
-echo -n $(echo "$SP"|grep sda2|awk "{print \$3\":\"\$2}")
+echo -n $(echo "$SP"|grep sda1|awk "{print \$4\":\"\$3}"):
+echo -n $(echo "$SP"|grep sda2|awk "{print \$4\":\"\$3}")
 echo
 '
 RRDgUM[5]='bytes'
