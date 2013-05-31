@@ -387,10 +387,10 @@ RRDgDEF[4]=$(cat <<EOF
   'VDEF:min1=ds1,MINIMUM'
   'VDEF:avg1=ds1,AVERAGE'
   'VDEF:tot1=ds1,TOTAL'
-  GPRINT:max1:"Max %6.2lf %s"
-  GPRINT:min1:"Min %6.2lf %s"
-  GPRINT:avg1:"Avg %6.2lf %s"
-  GPRINT:tot1:"Sum %6.2lf %s"
+  GPRINT:max1:"  Max %6.2lf %s"
+  GPRINT:min1:"  Min %6.2lf %s"
+  GPRINT:avg1:"  Avg %6.2lf %s"
+  GPRINT:tot1:"  Sum %6.2lf %s"
 'AREA:ui#FF6666:Offline\n'
 'LINE2:ds2#E32D00:Outgoing'
   'VDEF:max2=ds2,MAXIMUM'
