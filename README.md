@@ -42,7 +42,7 @@ Default values is for Entware/Optware.
 
     $ rrdstorm.sh create 0 1 2 3 4 5 6
 
-where 0..6 is sensor numbers. You may use only some of them:
+where 0..6 is a sensor numbers. You may use only some of them:
 
  * 0 - Average system load,
  * 1 - RAM usage,
