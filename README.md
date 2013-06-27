@@ -74,7 +74,7 @@ If you want to draw graphs for all those periods use:
 
     $ rrdstorm.sh graph 0 1 2 3 4 5 6
 
-On a Asus RT-N66U last one takes ~3,5 minutes. See WIKI pages for graph
+On a Asus RT-N66U last one takes ~3,5 minutes. See a WIKI pages for graph
 examples. Feel free to use and to discuss rrdstorm.sh here or at www.wl500g.info
 
 License
